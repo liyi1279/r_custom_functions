@@ -9,7 +9,7 @@ CheckPackages <- function(pkg){
     
   # check if input package installed
   new.pkg <- pkg[!(pkg %in% installed.packages()[, 'Package'])]
-  if(length(new.pkg)) BiocManager::install('afex')
+  if(length(new.pkg)) BiocManager::install(new.pkg)
   
   # load all packages
   sapply(pkg, require, character.only=TRUE)
