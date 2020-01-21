@@ -60,7 +60,7 @@ lsos <- function(..., n=10) {
 tryForeach <- function(core.num=1, node.num=FALSE, mainFunc){
   op <- tryCatch({
     cl.core <- makeCluster(core.num, outfile='')
-    registerDoSNOW(cl)
+    registerDoSNOW(cl.core)
     mainFunc()
   }, error=function(e){
     cat(str_c('\n', e,'\n'))
