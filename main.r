@@ -58,7 +58,7 @@ lsos <- function(..., n=10) {
 # combine tryCatch and foreach to make sure close clusters after run
 # even when error occurs.
 tryForeach <- function(core.num=1, node.num=FALSE, mainFunc){
-  tryCatch({
+  op <- tryCatch({
     cl.core <- makeCluster(core.num, outfile='')
     registerDoSNOW(cl)
     mainFunc()
@@ -67,8 +67,10 @@ tryForeach <- function(core.num=1, node.num=FALSE, mainFunc){
   }, finally={
     if(nrow(showConnections())!=0) 
       stopCluster(cl.core)
-  }) # end of tryCatch [Sub-1]
-} # end of tryForeach() [Main]
+  })
+  
+  return(op)
+}
 
 
 
