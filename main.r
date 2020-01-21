@@ -13,7 +13,13 @@ CheckPackages <- function(pkg){
   
   # load all packages
   sapply(pkg, require, character.only=TRUE)
+  for(i in 1:length(pkg)){
+    suppressPackageStartupMessages(
+      library(pkg[i], character.only = TRUE))
+  }
 }
+CheckPackages('rio')
+CheckPackages('dplyr')
 
 ## Credit: Taken from:  http://stackoverflow.com/questions/1358003/tricks-to-manage-the-available-memory-in-an-r-session
 # improved list of objects
