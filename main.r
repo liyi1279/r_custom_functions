@@ -18,8 +18,6 @@ CheckPackages <- function(pkg){
       library(pkg[i], character.only = TRUE))
   }
 }
-CheckPackages('rio')
-CheckPackages('dplyr')
 
 ## Credit: Taken from:  http://stackoverflow.com/questions/1358003/tricks-to-manage-the-available-memory-in-an-r-session
 # improved list of objects
@@ -71,6 +69,3 @@ tryForeach <- function(core.num=1, node.num=FALSE, mainFunc){
   
   return(op)
 }
-
-
-
