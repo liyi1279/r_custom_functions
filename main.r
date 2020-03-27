@@ -1,29 +1,41 @@
-## copy from website
+## origin code copy from website, cannot find link now
+## modified by Li
 ## usage example
-#packages <- c('ggplot2', 'afex')
-#CheckPackages(packages)
-CheckPackages <- function(pkg){
+# 1. Install public packages form BioManager()
+# CheckPackages(c('ggplot2', 'limma'))
+# 2. Install downloaded packages from local
+# Checkpackages(pkg='pd.hgu133plus2.hs.entrezg',
+#               f.path='/home/liyi/Mount_disk1500/CustomCDF/pd.hgu133plus2.hs.entrezg_24.0.0.tar.gz')
+
+CheckPackages <- function(pkg, f.path=NULL){
   # check if biocManager install
   pkg.manager <- ('BiocManager' %in% installed.packages()[,'Package'])
   if(!pkg.manager) install.packages('BioManager')
     
   # check if input package installed
   new.pkg <- pkg[!(pkg %in% installed.packages()[, 'Package'])]
-  if(length(new.pkg)) BiocManager::install(new.pkg)
+  
+  # install input packages if not installed
+  if(length(new.pkg)==1 & !is.null(f.path)){
+    install.packages(f.path, repos=NULL, type='source') 
+  } else {
+    if(length(new.pkg)) BiocManager::install(new.pkg)
+  }
   
   # load all packages
-  sapply(pkg, require, character.only=TRUE)
   for(i in 1:length(pkg)){
+    print(paste('Loading package:', pkg[i]))
     suppressPackageStartupMessages(
       library(pkg[i], character.only = TRUE))
+    print('Done')
   }
 }
 
-## Credit: Taken from:  http://stackoverflow.com/questions/1358003/tricks-to-manage-the-available-memory-in-an-r-session
-# improved list of objects
-## Credit: Taken from:  http://stackoverflow.com/questions/1358003/tricks-to-manage-the-available-memory-in-an-r-session
 
+## improved list of objects
+## Credit: Taken from:  http://stackoverflow.com/questions/1358003/tricks-to-manage-the-available-memory-in-an-r-session
 # improved list of objects
+## Credit: Taken from:  http://stackoverflow.com/questions/1358003/tricks-to-manage-the-available-memory-in-an-r-session
 .ls.objects <- function (pos = 1, pattern, order.by,
                          decreasing=FALSE, head=FALSE, n=5) {
   napply <- function(names, fn) sapply(names, function(x)
@@ -50,22 +62,4 @@ CheckPackages <- function(pkg){
 # shorthand
 lsos <- function(..., n=10) {
   .ls.objects(..., order.by="Size(Mb)", decreasing=TRUE, head=TRUE, n=n)
-}
-
-
-# combine tryCatch and foreach to make sure close clusters after run
-# even when error occurs.
-tryForeach <- function(core.num=1, node.num=FALSE, mainFunc){
-  op <- tryCatch({
-    cl.core <- makeCluster(core.num, outfile='')
-    registerDoSNOW(cl.core)
-    mainFunc()
-  }, error=function(e){
-    cat(str_c('\n', e,'\n'))
-  }, finally={
-    if(nrow(showConnections())!=0) 
-      stopCluster(cl.core)
-  })
-  
-  return(op)
 }
