@@ -63,3 +63,16 @@ CheckPackages <- function(pkg, f.path=NULL){
 lsos <- function(..., n=10) {
   .ls.objects(..., order.by="Size(Mb)", decreasing=TRUE, head=TRUE, n=n)
 }
+
+
+# flatten nested list into one-level list
+# code from https://stackoverflow.com/questions/16300344/how-to-flatten-a-list-of-lists
+flattenlist <- function(x){  
+  morelists <- sapply(x, function(xprime) class(xprime)[1]=="list")
+  out <- c(x[!morelists], unlist(x[morelists], recursive=FALSE))
+  if(sum(morelists)){ 
+    Recall(out)
+  }else{
+    return(out)
+  }
+}
