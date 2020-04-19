@@ -83,6 +83,7 @@ transToColors <- function(x){
   col.group <- factor(x)
   col.ngroup <- ifelse(nlevels(col.group)>=3,nlevels(col.group),3)
   levels(col.group) <- colorRampPalette(brewer.pal(col.ngroup,'Set1'))(col.ngroup)
-  col.group <- as.character(col.group)
-  return(col.group)
+  oput <- as.character(col.group)
+  names(oput) <- as.character(x)
+  return(oput)
 }
