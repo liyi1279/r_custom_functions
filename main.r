@@ -7,7 +7,7 @@
 # Checkpackages(pkg='pd.hgu133plus2.hs.entrezg',
 #               f.path='/home/liyi/Mount_disk1500/CustomCDF/pd.hgu133plus2.hs.entrezg_24.0.0.tar.gz')
 
-CheckPackages <- function(pkg, f.path=NULL){
+CheckPackages <- function(pkg, f.path=NULL, message=FALSE){
   # check if biocManager install
   pkg.manager <- ('BiocManager' %in% installed.packages()[,'Package'])
   if(!pkg.manager) install.packages('BioManager')
@@ -24,10 +24,8 @@ CheckPackages <- function(pkg, f.path=NULL){
   
   # load all packages
   for(i in 1:length(pkg)){
-    print(paste('Loading package:', pkg[i]))
-    suppressPackageStartupMessages(
-      library(pkg[i], character.only = TRUE))
-    print('Done')
+    suppressPackageStartupMessages(library(pkg[i], character.only = TRUE))
+    if(message) print(paste('Package: ', pkg[i], ' loaded'))
   }
 }
 
@@ -86,4 +84,65 @@ transToColors <- function(x){
   oput <- as.character(col.group)
   names(oput) <- as.character(x)
   return(oput)
+}
+
+# parsing GO terms with input by GO ID
+parseGO <- function(goid, 
+                    species=c('Homo sapiens','Mus musculus'), 
+                    type=c('protein', 'gene', 'protein_coding_gene', 'miRNA'), keep.code){
+  
+  CheckPackages(c('stringr', 'RCurl', 'dplyr'))
+  species <- 'Homo sapiens'
+  type <- 'protein'
+  keep.code <- c('EXP','IDA','IPI','IMP','IGI','IEP', # inferred from low-throughput
+                 'HTP','HDA','HPI','HMP','HGI','HEP', # inferred from high-throughput 
+                 'ISS','ISO', # inferred from structural similairty and Sequence orthology 
+                 'TAS', # Traceable author statement 
+                 'IC') # Curator
+  
+  # download 
+  url <- str_c('http://golr-aux.geneontology.io/solr/select?defType=edismax&qt=standard&indent=on&wt=csv&rows=100000&start=0&fl=bioentity,bioentity_label,type,taxon_label,annotation_class,annotation_class_label,evidence_type&facet=true&facet.mincount=1&facet.sort=count&json.nl=arrarr&facet.limit=25&hl=true&hl.simple.pre=%3Cem%20class=%22hilite%22%3E&hl.snippets=1000&csv.encapsulator=&csv.separator=%09&csv.header=false&csv.mv.separator=%7C&fq=document_category:%22annotation%22&fq=regulates_closure:%22',goid, '%22&facet.field=aspect&facet.field=taxon_subset_closure_label&facet.field=type&facet.field=evidence_subset_closure_label&facet.field=regulates_closure_label&facet.field=annotation_class_label&facet.field=qualifier&facet.field=annotation_extension_class_closure_label&facet.field=assigned_by&facet.field=panther_family_label&q=*:*')
+  f.char <- getURL(url)
+  dat0 <- read.csv(textConnection(f.char), sep='\t', header = FALSE) %>% as_tibble
+  
+  # processing
+  colnames(dat0) <- c('ID','Symbol','Type','Source','subTermID','SubTermName','EvidenceCode')
+  
+  # filter by species, type
+  dat1 <- dat0 %>% filter(Source==species & Type==type)
+  
+  # and labeled by evidence code
+  code.sel <- rep(NA,length=nrow(dat1))
+  code.sel[dat1$EvidenceCode %in% keep.code] <- 'O'
+  code.sel[is.na(code.sel)] <- 'X'
+  dat2 <- dat1 %>% mutate(CodeSelected=code.sel)
+  
+  # extract gene ID 
+  dat3 <- dat2 %>% mutate(UniprotID = str_remove(dat2$ID, '[^:]*:'))
+  
+  # rearrangment with sub-terms
+  dat4 <- dat3 %>% dplyr::select(SubTermName, UniprotID, CodeSelected) %>% arrange(SubTermName)
+  
+  # transform Uniport ID into EntrezID with org.Hs.eg.db
+  if(species=='Homo sapiens'){
+    CheckPackages('org.Hs.eg.db')
+    suppressMessages(
+      genes.mapping <- AnnotationDbi::select(org.Hs.eg.db, 
+                                             keys=unique(dat4$UniprotID), keytype = 'UNIPROT', 
+                                             columns=c('ENTREZID','SYMBOL')))
+  } else if(species=='Mus musculus'){
+    CheckPackages('org.Mm.eg.db')
+    suppressMessages(
+      genes.mapping <- AnnotationDbi::select(org.Mm.eg.db, 
+                                             keys=unique(dat4$UniprotID), keytype = 'UNIPROT', 
+                                             columns=c('ENTREZID','SYMBOL')))
+    
+  }
+  genes.mapping <- genes.mapping %>% na.omit() %>% distinct()
+  dat5 <- dat4 %>% inner_join(genes.mapping, by=c('UniprotID' = 'UNIPROT'))
+  
+  # generage final output
+  dat6 <- dat5 %>% dplyr::select(SubTermName, EntrezID=ENTREZID, Symbol=SYMBOL, CodeSelected) %>% distinct()
+  
+  return(dat6)
 }
